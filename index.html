@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google 試算表餐廳篩選器</title>
+    
+    <!-- 1. 更新：引入 LXGW WenKai TC 字體 --><link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- 載入 Tailwind CSS --><script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 2. 更新：將字體設定為 LXGW WenKai TC (文楷風格) */
+        body {
+            font-family: 'LXGW WenKai TC', cursive;
+            /* ---------------------------------------------------- */
+            /* 新增：加入微妙的背景圖案 (Pin Stripe 紋理) */
+            /* 讓 bg-amber-50 透過這個圖案顯示，創造層次感 */
+            background-image: url('https://www.transparenttextures.com/patterns/pinstripe.png'); 
+            background-repeat: repeat;
+            /* ---------------------------------------------------- */
+        }
+    </style>
+</head>
+<!-- 調整：背景色改為淺琥珀色 (bg-amber-50) --><body class="p-4 sm:p-8 bg-amber-50">
+
+    <!-- 佈局：max-w-6xl 限制寬度，mx-auto 實現水平居中 --><!-- 調整：主容器圓角為 rounded-2xl --><div class="max-w-6xl mx-auto bg-white shadow-2xl rounded-2xl p-6 md:p-10">
+        <!-- 標題已更新為「景點小助手」並更換圖示 --><h1 class="text-3xl font-extrabold text-gray-800 mb-6 border-b pb-3">
+            📍 景點小助手
+        </h1>
+
+        <!-- 篩選條件區 --><!-- 調整：圓角為 rounded-full，增加立體陰影 (shadow-xl) --><div class="flex flex-col sm:flex-row gap-4 mb-8 p-4 bg-amber-50 rounded-full shadow-xl">
+            
+            <!-- 地點篩選 --><div class="w-full sm:w-1/2">
+                <!-- 調整：文字顏色改為 amber-700 --><label for="locationFilter" class="block text-sm font-medium text-amber-700 mb-1">
+                    選擇地點
+                </label>
+                <!-- 調整：下拉選單圓角改為 rounded-full，並增加 hover 立體效果 --><select id="locationFilter" 
+                        class="w-full p-2.5 border border-amber-300 bg-white rounded-full shadow-md focus:ring-amber-500 focus:border-amber-500 transition duration-150 ease-in-out hover:shadow-lg hover:scale-[1.01]">
+                    <option value="">-- 所有地點 --</option>
+                </select>
+            </div>
+
+            <!-- 類型篩選 --><div class="w-full sm:w-1/2">
+                <!-- 調整：文字顏色改為 amber-700 --><label for="typeFilter" class="block text-sm font-medium text-amber-700 mb-1">
+                    選擇類型
+                </label>
+                <!-- 調整：下拉選單圓角改為 rounded-full，並增加 hover 立體效果 --><select id="typeFilter" 
+                        class="w-full p-2.5 border border-amber-300 bg-white rounded-full shadow-md focus:ring-amber-500 focus:border-amber-500 transition duration-150 ease-in-out hover:shadow-lg hover:scale-[1.01]">
+                    <option value="">-- 所有類型 --</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 篩選結果顯示區 --><h2 class="text-xl font-semibold text-gray-700 mb-4">
+            篩選結果
+            <span id="resultCount" class="text-sm font-normal text-gray-500 ml-2">(共 0 筆)</span>
+        </h2>
+        <!-- 調整：表格容器圓角為 rounded-2xl --><div id="resultsTableContainer" class="overflow-x-auto shadow-md rounded-2xl">
+            <!-- 結果表格將由 JavaScript 動態生成 --></div>
+    </div>
+
+    <script>
+        // 1. 原始資料陣列 (模擬試算表 A, B, C, D 欄位資料)
+        
+        // --- 餐廳資料清單 ---
+        // 格式：{ type: 'A欄-類型', store: 'B欄-店家', hours: 'C欄-營業時間', location: 'D欄-地點' }
+        const rawData = [
+            { type: '正餐餐廳', store: '六歌仙（燒肉）', hours: '11:00-23:00', location: '新宿' },
+            { type: '正餐餐廳', store: '木曽路（壽喜燒）多家分店', hours: '17:00-22:00', location: '新宿' },
+            { type: '正餐餐廳', store: '咖啡老舖 友路有', hours: '06:30-20:00', location: '淺草' },
+            { type: '正餐餐廳', store: 'Suke6 Diner', hours: '08:00-16:00', location: '淺草' },
+            { type: '正餐餐廳', store: 'Misojyu', hours: '08:00-13:00', location: '淺草' },
+            { type: '正餐餐廳', store: '浅草ときわ食堂', hours: '09:30-22:00', location: '淺草' },
+            { type: '甜點店', store: 'Flipper\'s 澀谷', hours: '9:00-19:00', location: '澀谷' },
+            { type: '購物商店', store: 'にしむらゆうじ購買部本店', hours: '10:30-20:30', location: '新宿' },
+            { type: '購物商店', store: '新宿高島屋時代廣場', hours: '10:30-19:30', location: '新宿' },
+            { type: '購物商店', store: 'LUMINE 2', hours: '11:00-21:00', location: '新宿' },
+            { type: '購物商店', store: 'Disney Store 旗艦店', hours: '10:00-21:00', location: '新宿' },
+            { type: '購物商店', store: 'KIDDY LAND 新宿店', hours: '10:30-20:30', location: '新宿' },
+            { type: '購物商店', store: 'PUNYUS', hours: '10:00-21:00', location: '澀谷' },
+            { type: '購物商店', store: '任天堂', hours: '10:00-21:00', location: '澀谷' },
+            { type: '購物商店', store: 'PARCO', hours: '11:00-21:00', location: '澀谷' },
+            { type: '購物商店', store: 'LOFT', hours: '11:00-21:00', location: '澀谷' },
+            { type: '觀光景點', store: '根津美術館', hours: '10:00-17:00', location: '港區' },
+            { type: '觀光景點', store: '新宿東口の猫', hours: 'N/A', location: '新宿' },
+            { type: '觀光景點', store: '歌舞伎町', hours: 'N/A', location: '新宿' },
+            { type: '觀光景點', store: '淺草寺', hours: 'N/A', location: '淺草' },
+            { type: '觀光景點', store: '明治神宮', hours: 'N/A', location: '澀谷' },
+            { type: '正餐餐廳', store: '烤魚定食 やんも', hours: '11:45–13:30', location: '港區' },
+            { type: '正餐餐廳', store: 'Kastanie Rotiserrie', hours: '16:00–21:00', location: '輕井澤' },
+            { type: '購物商店', store: '輕井澤王子購物廣場', hours: '10:00–19:00', location: '輕井澤' },
+            { type: '觀光景點', store: '舊輕井澤銀座通', hours: 'N/A', location: '輕井澤' },
+            { type: '正餐餐廳', store: '焼き鳥ひぐも', hours: '17:00–22:00', location: '輕井澤' },
+            { type: '甜點店', store: 'ぱおむ 軽井沢 ビストロ', hours: '11:00–14:30', location: '輕井澤' },
+            { type: '觀光景點', store: '輕井澤聖保羅天主教堂', hours: '09:00–16:00', location: '輕井澤' },
+            { type: '甜點店', store: '輕井澤法國麵包店', hours: '08:00–17:00', location: '輕井澤' },
+            { type: '觀光景點', store: '石之教會 内村鑑三記念堂', hours: '10:00–17:00', location: '輕井澤' },
+            { type: '甜點店', store: 'Sawamura Bakery & Restaurant Harunire Terrace', hours: '07:00–22:00', location: '輕井澤' },
+            { type: '甜點店', store: '丸山咖啡 榆樹街小鎮店', hours: '08:00–19:00', location: '輕井澤' },
+            { type: '正餐餐廳', store: '村民食堂', hours: '17:00–20:30', location: '輕井澤' },
+            { type: '觀光景點', store: '榆樹街小鎮', hours: 'N/A', location: '輕井澤' },
+            { type: '正餐餐廳', store: 'かまど炊きご飯 御厨', hours: '07:15–14:15', location: '輕井澤' },
+            { type: '觀光景點', store: '小諸城', hours: '09:00–17:00', location: '小諸' },
+            { type: '觀光景點', store: '布引観音釈尊寺', hours: 'N/A', location: '小諸' },
+            { type: '觀光景點', store: '上田城 二の丸跡', hours: 'N/A', location: '上田' },
+            { type: '正餐餐廳', store: 'Ramen Misoya', hours: '11:00–00:00', location: '長野' },
+            { type: '正餐餐廳', store: '古蹟餐廳 藤屋御本陳', hours: '11:00–15:00、17:30–21:30', location: '長野' },
+            { type: '觀光景點', store: '信州 善光寺 仲見世通', hours: 'N/A', location: '長野' },
+            { type: '觀光景點', store: '城山公園', hours: 'N/A', location: '長野' },
+            { type: '觀光景點', store: '善光寺', hours: '06:00–16:00', location: '長野' },
+            { type: '觀光景點', store: '戸隠神社', hours: 'N/A', location: '長野' },
+            { type: '觀光景點', store: '地獄谷野猿公苑', hours: '09:00–16:00', location: '長野' },
+            { type: '甜點店', store: '小布施堂', hours: '09:00–17:00', location: '小布施' },
+            { type: '正餐餐廳', store: '小布施 寄り付き料理 蔵部', hours: '11:00–22:00', location: '小布施' },
+            { type: '購物商店', store: '自在屋', hours: '09:30–17:30', location: '小布施' },
+            { type: '購物商店', store: '農産物直売所 ろくさん', hours: '09:30–16:30', location: '小布施' },
+            { type: '觀光景點', store: '岩松院', hours: '09:00–16:00', location: '小布施' },
+            { type: '觀光景點', store: '北齋館', hours: '09:00–17:00', location: '小布施' },
+            { type: '觀光景點', store: '城山公園', hours: 'N/A', location: '松本市' },
+            { type: '觀光景點', store: '旧開智学校校舎', hours: '09:00–17:00', location: '松本市' },
+            { type: '觀光景點', store: '松本城', hours: '08:30–16:30', location: '松本市' },
+            { type: '觀光景點', store: '四柱神社', hours: 'N/A', location: '松本市' },
+            { type: '正餐餐廳', store: '時代遅れの洋食屋おきな堂', hours: '11:00–15:00, 17:30–20:30', location: '松本市' },
+            { type: '正餐餐廳', store: '麺匠佐蔵', hours: '11:30–15:00, 17:30–22:00', location: '松本市' },
+            { type: '購物商店', store: 'Aeon Mall Matsumoto', hours: '10:00–21:00', location: '松本市' },
+            { type: '觀光景點', store: '弘法山古墳', hours: 'N/A', location: '松本市' },
+            { type: '觀光景點', store: '奈良井宿', hours: 'N/A', location: '松本市' },
+            { type: '觀光景點', store: '諏訪大社', hours: 'N/A', location: '諏訪町' },
+            { type: '觀光景點', store: '赤砂崎公園', hours: 'N/A', location: '諏訪町' },
+            { type: '觀光景點', store: '立石公園', hours: 'N/A', location: '諏訪町' },
+            { type: '觀光景點', store: '天上山公園纜車', hours: '08:30–18:00', location: '富士河口湖町' },
+            { type: '正餐餐廳', store: '餺飥藏 步成 河口湖店', hours: '11:00–20:30', location: '富士河口湖町' },
+            { type: '甜點店', store: '木村屋布丁', hours: '10:00–19:00', location: '富士河口湖町' },
+            { type: '觀光景點', store: '富士急ターミナルビル Q-STA', hours: '10:00–20:00', location: '富士河口湖町' },
+            { type: '觀光景點', store: '新倉山淺間公園', hours: 'N/A', location: '富士河口湖町' },
+            { type: '觀光景點', store: '北口本宮富士淺間神社', hours: '08:30–16:50', location: '富士河口湖町' },
+            { type: '甜點店', store: 'Chiffon Fuji', hours: '10:00–18:00', location: '富士河口湖町' },
+        ];
+        // --- 陣列結尾 ---
+
+
+        // 2. 獲取 DOM 元素
+        const locationFilter = document.getElementById('locationFilter');
+        const typeFilter = document.getElementById('typeFilter');
+        const resultsTableContainer = document.getElementById('resultsTableContainer');
+        const resultCountSpan = document.getElementById('resultCount');
+
+        // 定義類型與對應圖示的映射
+        const typeIcons = {
+            '正餐餐廳': '🍴', // 刀叉
+            '甜點店': '🍰',    // 蛋糕
+            '購物商店': '🛍️',  // 購物袋
+            '觀光景點': '⛩️',  // 鳥居 (也可以改成 🏞️ 山水圖示或 📸 相機)
+            // 如果有其他類型，可以在這裡添加
+        };
+
+        /**
+         * 3. 填充下拉選單選項
+         * @param {HTMLElement} selectElement - 要填充的 <select> 元素
+         * @param {string} key - 原始資料中要提取的鍵名 ('location' 或 'type')
+         */
+        function populateFilters(selectElement, key) {
+            // 清空舊的選項，但保留 "所有選項"
+            selectElement.innerHTML = `<option value="">-- 所有${key === 'location' ? '地點' : '類型'} --</option>`;
+
+            // 使用 Set 獲取唯一值
+            const uniqueValues = new Set(rawData.map(item => item[key]));
+            
+            // 將唯一值轉換為陣列並排序
+            const sortedValues = Array.from(uniqueValues).sort();
+
+            // 創建並添加選項
+            sortedValues.forEach(value => {
+                if (value) { // 確保值不為空
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = value;
+                    selectElement.appendChild(option);
+                }
+            });
+        }
+
+        /**
+         * 4. 執行 FILTER 函式並渲染結果
+         */
+        function filterDataAndRender() {
+            // 獲取當前選定的篩選值 (相當於 Google Sheets 中的 E1 和 F1)
+            const selectedLocation = locationFilter.value;
+            const selectedType = typeFilter.value;
+
+            // 執行篩選 (模擬 Google Sheets 的 =FILTER(...) 邏輯)
+            const filteredData = rawData.filter(item => {
+                // 條件一: 地點篩選
+                const locationMatch = selectedLocation === "" || item.location === selectedLocation;
+                // 條件二: 類型篩選 (AND 邏輯)
+                const typeMatch = selectedType === "" || item.type === selectedType;
+
+                return locationMatch && typeMatch;
+            });
+
+            // 渲染結果
+            renderResults(filteredData);
+        }
+
+        /**
+         * 5. 將結果渲染成 HTML 表格
+         * @param {Array<Object>} data - 已篩選的資料陣列
+         */
+        function renderResults(data) {
+            resultCountSpan.textContent = `(共 ${data.length} 筆)`;
+
+            if (data.length === 0) {
+                resultsTableContainer.innerHTML = `
+                    <p class="p-4 text-center text-gray-500 bg-amber-100 rounded-lg">
+                        找不到符合條件的項目。請嘗試不同的篩選組合。
+                    </p>
+                `;
+                return;
+            }
+
+            let html = `
+                <table class="min-w-full divide-y divide-gray-200">
+                    <!-- 調整：表格標頭顏色改為 amber-600 --><thead class="bg-amber-600 text-white">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider rounded-tl-2xl">類型</th>
+                            <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">店家</th>
+                            <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">營業時間</th>
+                            <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider rounded-tr-2xl">地點</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+            `;
+
+            data.forEach((item, index) => {
+                // 根據類型給予不同的背景顏色，增加可讀性
+                const rowClass = index % 2 === 0 ? 'bg-gray-50' : 'bg-white';
+                
+                // 獲取對應的圖示，如果沒有則使用預設圖示
+                const icon = typeIcons[item.type] || 'ℹ️'; // 'ℹ️' 是預設資訊圖示
+
+                html += `
+                    <!-- 調整：滑鼠懸停顏色改為 amber-100 --><tr class="${rowClass} hover:bg-amber-100 transition duration-150">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            ${icon} ${item.type}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.store}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${item.hours}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700 font-semibold">${item.location}</td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                    </tbody>
+                </table>
+            `;
+
+            resultsTableContainer.innerHTML = html;
+        }
+
+        // 6. 初始化設定和事件監聽
+        window.onload = function() {
+            // 填充下拉選單
+            populateFilters(locationFilter, 'location');
+            populateFilters(typeFilter, 'type');
+
+            // 綁定事件監聽器 (當下拉選單改變時，重新篩選並渲染)
+            locationFilter.addEventListener('change', filterDataAndRender);
+            typeFilter.addEventListener('change', filterDataAndRender);
+
+            // 首次加載時渲染所有資料
+            filterDataAndRender();
+        };
+
+    </script>
+</body>
+</html>
