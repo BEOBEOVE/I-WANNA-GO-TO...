@@ -38,7 +38,7 @@
             <div class="w-1/2">
                 
                 <label for="locationFilter" class="block text-sm font-medium text-amber-700 mb-1">
-                    選擇地點 (D欄)
+                    選擇地點
                 </label>
                 
                 <select id="locationFilter" 
@@ -51,7 +51,7 @@
             <div class="w-1/2">
                 
                 <label for="typeFilter" class="block text-sm font-medium text-amber-700 mb-1">
-                    選擇類型 (A欄)
+                    選擇類型
                 </label>
                 
                 <select id="typeFilter" 
@@ -189,12 +189,14 @@
             const defaultOptionText = `-- 所有${key === 'location' ? '地點' : '類型'} --`;
             
             // 找出與 dependencyValue 相關的資料子集
+            // 如果 dependencyValue 不為空，則過濾資料以建立連動清單
             const filteredData = dependencyValue 
                 ? rawData.filter(item => {
+                    // 檢查資料的另一個鍵是否等於依賴值
                     const otherKey = key === 'location' ? 'type' : 'location';
                     return item[otherKey] === dependencyValue;
                 })
-                : rawData;
+                : rawData; // 如果沒有依賴值，則使用所有資料
             
             // 從子集中獲取唯一的選項值
             const uniqueValues = new Set(filteredData.map(item => item[key]));
@@ -235,22 +237,26 @@
 
         /**
          * 5. 執行連動篩選和渲染
-         * 此函數現在負責：1. 根據兩組篩選條件過濾資料。 2. 根據當前的篩選結果更新下拉選單。
          * * 修正邏輯：地點清單永遠顯示所有選項（不依賴類型）；類型清單只顯示所選地點中包含的類型。
          */
         function filterDataAndRender() {
+            // 取得目前選定的值
             const selectedLocation = locationFilter.value;
             const selectedType = typeFilter.value;
 
             // 步驟 1: 更新連動篩選器
             
-            // 1a. 根據選中的地點 (Location)，更新類型 (Type) 下拉選單的選項
-            // (類型受地點選擇影響)
+            // 1a. 地點 (Location) 下拉選單獨立更新，不依賴類型選擇，永遠顯示所有地點
+            // 傳入 "" 表示地點清單總是基於所有原始資料來生成
+            populateFilters(locationFilter, 'location', "");
+
+
+            // 1b. 根據選中的地點 (Location)，更新類型 (Type) 下拉選單的選項
+            // (類型受地點選擇影響。如果 selectedLocation 是空字串，populateFilters 會使用所有資料)
             populateFilters(typeFilter, 'type', selectedLocation);
             
-            // 1b. 地點 (Location) 下拉選單獨立更新，不依賴類型選擇，永遠顯示所有地點
-            // (地點不受類型選擇影響，傳入 "" 表示不設定依賴條件)
-            populateFilters(locationFilter, 'location', "");
+            // ***注意：由於類型清單已經更新，如果先前選定的 selectedType 不再是有效選項，
+            // populateFilters 內部會自動將 selectElement.value 重設為 ""。***
 
 
             // 步驟 2: 執行最終的資料篩選 (模擬 Google Sheets 的 =FILTER(...) 邏輯)
@@ -265,10 +271,7 @@
             renderResults(filteredData);
         }
 
-        /**
-         * 6. 將結果渲染成 HTML 表格
-         * @param {Array<Object>} data - 已篩選的資料陣列
-         */
+        // 6. 將結果渲染成 HTML 表格 (略)
         function renderResults(data) {
             resultCountSpan.textContent = `(共 ${data.length} 筆)`;
 
@@ -323,9 +326,10 @@
             resultsTableContainer.innerHTML = html;
         }
 
+
         // 7. 初始化設定和事件監聽
         window.onload = function() {
-            // 第一次初始化時，不需要 dependencyValue
+            // 第一次初始化時，地點和類型清單都以所有資料為基礎
             populateFilters(locationFilter, 'location');
             populateFilters(typeFilter, 'type');
 
