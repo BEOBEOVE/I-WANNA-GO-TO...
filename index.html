@@ -5,64 +5,78 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Google 試算表餐廳篩選器</title>
     
-    <!-- 1. 更新：引入 LXGW WenKai TC 字體 --><link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&display=swap" rel="stylesheet">
+    <!-- 引入 LXGW WenKai TC 字體 (霞鶩文楷 繁體中文) -->
+    <link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&display=swap" rel="stylesheet">
     
-    <!-- 載入 Tailwind CSS --><script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Tailwind CSS 框架 -->
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* 2. 更新：將字體設定為 LXGW WenKai TC (文楷風格) */
+        /* 應用 LXGW WenKai TC 字體 */
         body {
             font-family: 'LXGW WenKai TC', cursive;
-            /* ---------------------------------------------------- */
-            /* 新增：加入微妙的背景圖案 (Pin Stripe 紋理) */
-            /* 讓 bg-amber-50 透過這個圖案顯示，創造層次感 */
+            /* 背景紋理圖案 */
             background-image: url('https://www.transparenttextures.com/patterns/pinstripe.png'); 
             background-repeat: repeat;
-            /* ---------------------------------------------------- */
         }
     </style>
 </head>
-<!-- 調整：背景色改為淺琥珀色 (bg-amber-50) --><body class="p-4 sm:p-8 bg-amber-50">
 
-    <!-- 佈局：max-w-6xl 限制寬度，mx-auto 實現水平居中 --><!-- 調整：主容器圓角為 rounded-2xl --><div class="max-w-6xl mx-auto bg-white shadow-2xl rounded-2xl p-6 md:p-10">
-        <!-- 標題已更新為「景點小助手」並更換圖示 --><h1 class="text-3xl font-extrabold text-gray-800 mb-6 border-b pb-3">
+<body class="p-4 sm:p-8 bg-amber-50">
+
+    <!-- 主容器：設置最大寬度、居中、白色背景、陰影和圓角 -->
+    <div class="max-w-6xl mx-auto bg-white shadow-2xl rounded-2xl p-6 md:p-10">
+        
+        <!-- 標題 -->
+        <h1 class="text-3xl font-extrabold text-gray-800 mb-6 border-b pb-3">
             📍 景點小助手
         </h1>
 
-        <!-- 篩選條件區 --><!-- 調整：圓角為 rounded-full，增加立體陰影 (shadow-xl) --><div class="flex flex-col sm:flex-row gap-4 mb-8 p-4 bg-amber-50 rounded-full shadow-xl">
+        <!-- 篩選區塊：強制並排 (flex)，確保手機和電腦佈局一致 -->
+        <div class="flex flex-row gap-4 mb-8 p-4 bg-amber-50 rounded-full shadow-xl">
             
-            <!-- 地點篩選 --><div class="w-full sm:w-1/2">
-                <!-- 調整：文字顏色改為 amber-700 --><label for="locationFilter" class="block text-sm font-medium text-amber-700 mb-1">
-                    選擇地點
+            <!-- 地點篩選器 -->
+            <div class="w-1/2">
+                
+                <label for="locationFilter" class="block text-sm font-medium text-amber-700 mb-1">
+                    選擇地點 (D欄)
                 </label>
-                <!-- 調整：下拉選單圓角改為 rounded-full，並增加 hover 立體效果 --><select id="locationFilter" 
+                
+                <select id="locationFilter" 
                         class="w-full p-2.5 border border-amber-300 bg-white rounded-full shadow-md focus:ring-amber-500 focus:border-amber-500 transition duration-150 ease-in-out hover:shadow-lg hover:scale-[1.01]">
                     <option value="">-- 所有地點 --</option>
                 </select>
             </div>
 
-            <!-- 類型篩選 --><div class="w-full sm:w-1/2">
-                <!-- 調整：文字顏色改為 amber-700 --><label for="typeFilter" class="block text-sm font-medium text-amber-700 mb-1">
-                    選擇類型
+            <!-- 類型篩選器 -->
+            <div class="w-1/2">
+                
+                <label for="typeFilter" class="block text-sm font-medium text-amber-700 mb-1">
+                    選擇類型 (A欄)
                 </label>
-                <!-- 調整：下拉選單圓角改為 rounded-full，並增加 hover 立體效果 --><select id="typeFilter" 
+                
+                <select id="typeFilter" 
                         class="w-full p-2.5 border border-amber-300 bg-white rounded-full shadow-md focus:ring-amber-500 focus:border-amber-500 transition duration-150 ease-in-out hover:shadow-lg hover:scale-[1.01]">
                     <option value="">-- 所有類型 --</option>
                 </select>
             </div>
         </div>
 
-        <!-- 篩選結果顯示區 --><h2 class="text-xl font-semibold text-gray-700 mb-4">
+        <!-- 篩選結果標題 -->
+        <h2 class="text-xl font-semibold text-gray-700 mb-4">
             篩選結果
             <span id="resultCount" class="text-sm font-normal text-gray-500 ml-2">(共 0 筆)</span>
         </h2>
-        <!-- 調整：表格容器圓角為 rounded-2xl --><div id="resultsTableContainer" class="overflow-x-auto shadow-md rounded-2xl">
-            <!-- 結果表格將由 JavaScript 動態生成 --></div>
+        
+        <!-- 結果表格容器 -->
+        <div id="resultsTableContainer" class="overflow-x-auto shadow-md rounded-2xl">
+            <!-- 篩選結果表格將由 JavaScript 渲染到此處 -->
+        </div>
     </div>
 
     <script>
         // 1. 原始資料陣列 (模擬試算表 A, B, C, D 欄位資料)
         
-        // --- 餐廳資料清單 ---
+        // --- 景點與餐廳資料清單 ---
         // 格式：{ type: 'A欄-類型', store: 'B欄-店家', hours: 'C欄-營業時間', location: 'D欄-地點' }
         const rawData = [
             { type: '正餐餐廳', store: '六歌仙（燒肉）', hours: '11:00-23:00', location: '新宿' },
@@ -150,12 +164,22 @@
             '正餐餐廳': '🍴', // 刀叉
             '甜點店': '🍰',    // 蛋糕
             '購物商店': '🛍️',  // 購物袋
-            '觀光景點': '⛩️',  // 鳥居 (也可以改成 🏞️ 山水圖示或 📸 相機)
+            '觀光景點': '⛩️',  // 鳥居
             // 如果有其他類型，可以在這裡添加
         };
+        
+        // 3. 自定義地點順序 (輕井澤為起點，往長野方向)
+        const customLocationOrder = [
+            '輕井澤', // 第一站：輕井澤
+            '小諸', '上田', '長野', '小布施', // 長野周邊
+            '松本市', '諏訪町', // 松本及諏訪
+            '富士河口湖町', // 富士山周邊
+            '新宿', '淺草', '澀谷', '港區' // 最後回到東京及其周邊
+        ];
+
 
         /**
-         * 3. 填充下拉選單選項
+         * 4. 填充下拉選單選項
          * @param {HTMLElement} selectElement - 要填充的 <select> 元素
          * @param {string} key - 原始資料中要提取的鍵名 ('location' 或 'type')
          */
@@ -166,11 +190,29 @@
             // 使用 Set 獲取唯一值
             const uniqueValues = new Set(rawData.map(item => item[key]));
             
-            // 將唯一值轉換為陣列並排序
-            const sortedValues = Array.from(uniqueValues).sort();
+            let valuesToDisplay;
+
+            if (key === 'location') {
+                // 使用自定義順序進行排序
+                
+                // 1. 篩選 customLocationOrder，只保留資料中存在的地點
+                const presentCustomOrder = customLocationOrder.filter(location => uniqueValues.has(location));
+                
+                // 2. 找出資料中存在，但不在 customLocationOrder 中的地點 (備用)
+                const otherLocations = Array.from(uniqueValues)
+                                        .filter(location => !customLocationOrder.includes(location))
+                                        .sort(); // 備用地點按字母排序
+                
+                // 合併清單，優先顯示自定義順序的地點
+                valuesToDisplay = presentCustomOrder.concat(otherLocations);
+
+            } else {
+                // 對於 '類型'，保持字母排序
+                valuesToDisplay = Array.from(uniqueValues).sort();
+            }
 
             // 創建並添加選項
-            sortedValues.forEach(value => {
+            valuesToDisplay.forEach(value => {
                 if (value) { // 確保值不為空
                     const option = document.createElement('option');
                     option.value = value;
@@ -181,7 +223,7 @@
         }
 
         /**
-         * 4. 執行 FILTER 函式並渲染結果
+         * 5. 執行 FILTER 函式並渲染結果
          */
         function filterDataAndRender() {
             // 獲取當前選定的篩選值 (相當於 Google Sheets 中的 E1 和 F1)
@@ -203,7 +245,7 @@
         }
 
         /**
-         * 5. 將結果渲染成 HTML 表格
+         * 6. 將結果渲染成 HTML 表格
          * @param {Array<Object>} data - 已篩選的資料陣列
          */
         function renderResults(data) {
@@ -220,7 +262,8 @@
 
             let html = `
                 <table class="min-w-full divide-y divide-gray-200">
-                    <!-- 調整：表格標頭顏色改為 amber-600 --><thead class="bg-amber-600 text-white">
+                    
+                    <thead class="bg-amber-600 text-white">
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider rounded-tl-2xl">類型</th>
                             <th class="px-6 py-3 text-left text-xs font-bold uppercase tracking-wider">店家</th>
@@ -239,7 +282,8 @@
                 const icon = typeIcons[item.type] || 'ℹ️'; // 'ℹ️' 是預設資訊圖示
 
                 html += `
-                    <!-- 調整：滑鼠懸停顏色改為 amber-100 --><tr class="${rowClass} hover:bg-amber-100 transition duration-150">
+                    
+                    <tr class="${rowClass} hover:bg-amber-100 transition duration-150">
                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                             ${icon} ${item.type}
                         </td>
@@ -258,7 +302,7 @@
             resultsTableContainer.innerHTML = html;
         }
 
-        // 6. 初始化設定和事件監聽
+        // 7. 初始化設定和事件監聽
         window.onload = function() {
             // 填充下拉選單
             populateFilters(locationFilter, 'location');
