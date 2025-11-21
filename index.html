@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google 試算表餐廳篩選器</title>
+    <title>景點小助手</title>
     
     <!-- 引入 LXGW WenKai TC 字體 (霞鶩文楷 繁體中文) -->
     <link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&display=swap" rel="stylesheet">
@@ -182,65 +182,86 @@
          * 4. 填充下拉選單選項
          * @param {HTMLElement} selectElement - 要填充的 <select> 元素
          * @param {string} key - 原始資料中要提取的鍵名 ('location' 或 'type')
+         * @param {string} dependencyValue - 依賴的篩選值 (例如: 已經選擇的地點)。若為空字串，則不進行依賴篩選。
          */
-        function populateFilters(selectElement, key) {
+        function populateFilters(selectElement, key, dependencyValue = "") {
             // 清空舊的選項，但保留 "所有選項"
-            selectElement.innerHTML = `<option value="">-- 所有${key === 'location' ? '地點' : '類型'} --</option>`;
-
-            // 使用 Set 獲取唯一值
-            const uniqueValues = new Set(rawData.map(item => item[key]));
+            const defaultOptionText = `-- 所有${key === 'location' ? '地點' : '類型'} --`;
+            
+            // 找出與 dependencyValue 相關的資料子集
+            const filteredData = dependencyValue 
+                ? rawData.filter(item => {
+                    const otherKey = key === 'location' ? 'type' : 'location';
+                    return item[otherKey] === dependencyValue;
+                })
+                : rawData;
+            
+            // 從子集中獲取唯一的選項值
+            const uniqueValues = new Set(filteredData.map(item => item[key]));
             
             let valuesToDisplay;
 
             if (key === 'location') {
-                // 使用自定義順序進行排序
-                
-                // 1. 篩選 customLocationOrder，只保留資料中存在的地點
+                // 地點使用自定義順序
                 const presentCustomOrder = customLocationOrder.filter(location => uniqueValues.has(location));
-                
-                // 2. 找出資料中存在，但不在 customLocationOrder 中的地點 (備用)
                 const otherLocations = Array.from(uniqueValues)
                                         .filter(location => !customLocationOrder.includes(location))
-                                        .sort(); // 備用地點按字母排序
-                
-                // 合併清單，優先顯示自定義順序的地點
+                                        .sort(); 
                 valuesToDisplay = presentCustomOrder.concat(otherLocations);
 
             } else {
-                // 對於 '類型'，保持字母排序
+                // 類型保持字母排序
                 valuesToDisplay = Array.from(uniqueValues).sort();
             }
 
-            // 創建並添加選項
+            // 重新建構下拉選單內容
+            let htmlOptions = `<option value="">${defaultOptionText}</option>`;
+            const selectedValue = selectElement.value; // 保留當前的選擇值
+            
             valuesToDisplay.forEach(value => {
-                if (value) { // 確保值不為空
-                    const option = document.createElement('option');
-                    option.value = value;
-                    option.textContent = value;
-                    selectElement.appendChild(option);
+                if (value) {
+                    const isSelected = value === selectedValue ? 'selected' : '';
+                    htmlOptions += `<option value="${value}" ${isSelected}>${value}</option>`;
                 }
             });
+
+            // 檢查原先選中的值是否仍然有效，如果無效則重置
+            if (selectedValue && !uniqueValues.has(selectedValue)) {
+                selectElement.value = "";
+            }
+            
+            selectElement.innerHTML = htmlOptions;
         }
 
         /**
-         * 5. 執行 FILTER 函式並渲染結果
+         * 5. 執行連動篩選和渲染
+         * 此函數現在負責：1. 根據兩組篩選條件過濾資料。 2. 根據當前的篩選結果更新下拉選單。
+         * * 修正邏輯：地點清單永遠顯示所有選項（不依賴類型）；類型清單只顯示所選地點中包含的類型。
          */
         function filterDataAndRender() {
-            // 獲取當前選定的篩選值 (相當於 Google Sheets 中的 E1 和 F1)
             const selectedLocation = locationFilter.value;
             const selectedType = typeFilter.value;
 
-            // 執行篩選 (模擬 Google Sheets 的 =FILTER(...) 邏輯)
+            // 步驟 1: 更新連動篩選器
+            
+            // 1a. 根據選中的地點 (Location)，更新類型 (Type) 下拉選單的選項
+            // (類型受地點選擇影響)
+            populateFilters(typeFilter, 'type', selectedLocation);
+            
+            // 1b. 地點 (Location) 下拉選單獨立更新，不依賴類型選擇，永遠顯示所有地點
+            // (地點不受類型選擇影響，傳入 "" 表示不設定依賴條件)
+            populateFilters(locationFilter, 'location', "");
+
+
+            // 步驟 2: 執行最終的資料篩選 (模擬 Google Sheets 的 =FILTER(...) 邏輯)
             const filteredData = rawData.filter(item => {
-                // 條件一: 地點篩選
                 const locationMatch = selectedLocation === "" || item.location === selectedLocation;
-                // 條件二: 類型篩選 (AND 邏輯)
                 const typeMatch = selectedType === "" || item.type === selectedType;
 
                 return locationMatch && typeMatch;
             });
 
-            // 渲染結果
+            // 步驟 3: 渲染結果
             renderResults(filteredData);
         }
 
@@ -304,7 +325,7 @@
 
         // 7. 初始化設定和事件監聽
         window.onload = function() {
-            // 填充下拉選單
+            // 第一次初始化時，不需要 dependencyValue
             populateFilters(locationFilter, 'location');
             populateFilters(typeFilter, 'type');
 
